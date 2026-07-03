@@ -1,0 +1,10 @@
+pdfplumber
+pytesseract
+pdf2image
+pillow
+python-pptx
+pillow-heif
+pandas
+openpyxl
+reportlab
+PyMuPDF

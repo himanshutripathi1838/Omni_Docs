@@ -1,0 +1,17 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+SQLAlchemy==2.0.36
+pydantic[email]==2.10.4
+PyMuPDF==1.25.1
+python-docx==1.1.2
+Pillow==11.0.0
+python-pptx
+pillow-heif
+pandas
+openpyxl
+reportlab
+opencv-python==4.10.0.84
+pdfplumber
+pytesseract
+pdf2image
