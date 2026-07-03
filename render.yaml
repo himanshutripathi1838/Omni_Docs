@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: omnidocs-api
+    runtime: python
+    plan: free
+    region: oregon
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    autoDeployTrigger: commit
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: CORS_ALLOW_ORIGIN_REGEX
+        value: https://.*\.onrender\.com
+
+  - type: web
+    name: omnidocs-web
+    runtime: static
+    plan: free
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    autoDeployTrigger: commit
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          name: omnidocs-api
+          type: web
+          envVarKey: RENDER_EXTERNAL_HOSTNAME

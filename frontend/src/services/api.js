@@ -1,6 +1,13 @@
 import axios from "axios";
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8001";
+function normalizeApiBaseUrl(value) {
+  const fallback = "http://localhost:8001";
+  const rawValue = (value || "").trim();
+  if (!rawValue) return fallback;
+  return /^https?:\/\//i.test(rawValue) ? rawValue : `https://${rawValue}`;
+}
+
+export const API_BASE_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_BASE_URL);
 
 const api = axios.create({
   baseURL: `${API_BASE_URL}/api`,

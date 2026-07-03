@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.config.settings import ALLOWED_ORIGINS, API_PREFIX, OUTPUT_DIR
+from app.config.settings import ALLOWED_ORIGINS, API_PREFIX, CORS_ALLOW_ORIGIN_REGEX, OUTPUT_DIR
 from app.database.db import init_db
 from app.routes import admin_routes, auth_routes, convert_routes, document_routes, editor_routes, history_routes, ocr_routes, upload_routes
 
@@ -12,6 +12,7 @@ app = FastAPI(title="OmniDocs API", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=CORS_ALLOW_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

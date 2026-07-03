@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 
@@ -13,6 +14,7 @@ ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
+CORS_ALLOW_ORIGIN_REGEX = os.getenv("CORS_ALLOW_ORIGIN_REGEX", r"https://.*\.onrender\.com")
 
 for directory in (UPLOAD_DIR, OUTPUT_DIR, TEMP_DIR):
     directory.mkdir(parents=True, exist_ok=True)
