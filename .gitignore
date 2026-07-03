@@ -7,6 +7,7 @@ __pycache__/
 .env
 outputs/
 dev_artifacts/
+docs/
 frontend/dist/
 frontend/node_modules/
 frontend/vite.err.log
