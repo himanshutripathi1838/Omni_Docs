@@ -54,10 +54,12 @@ def save_image_output(image_path: Path, output_path: Path) -> Path:
 
 @router.get("/status")
 def ocr_status():
-    return {
-        "engine": "placeholder",
-        "message": "PaddleOCR or Tesseract can be connected here for production OCR.",
-    }
+    try:
+        import pytesseract
+        languages = pytesseract.get_languages(config="")
+        return {"engine": "tesseract", "available": bool(set(languages) & {"eng", "hin"}), "languages": languages}
+    except Exception:
+        return {"engine": "tesseract", "available": False, "languages": []}
 
 
 @router.post("/image/save")
@@ -83,7 +85,9 @@ def save_edited_image(
 
         saved_path = save_upload(file, UPLOAD_DIR)
         fallback_stem = saved_path.stem or "edited_image"
-        extracted_text = ocr_text.strip() or extract_text_from_image(saved_path)
+        extracted_text = ocr_text.strip()
+        if normalized_format == "docx" and not extracted_text:
+            extracted_text = extract_text_from_image(saved_path)
 
         if normalized_format == "pdf":
             output_filename = make_safe_output_name(output_name, fallback_stem, "pdf")

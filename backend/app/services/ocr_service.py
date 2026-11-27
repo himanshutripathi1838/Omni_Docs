@@ -6,19 +6,22 @@ import fitz
 def extract_text_from_image(image_path: Path) -> str:
     try:
         import pytesseract
-        from PIL import Image
+        from PIL import Image, ImageOps
 
-        text = pytesseract.image_to_string(Image.open(image_path), lang="eng+hin").strip()
-        if text:
-            return text
-    except Exception:
-        pass
-
-    # Future AI/OCR integration point: plug PaddleOCR, cloud OCR, or tuned Tesseract here.
-    return (
-        f"OCR placeholder text extracted from {image_path.name}.\n\n"
-        "Install/configure Tesseract or PaddleOCR to enable production-grade OCR."
-    )
+        languages = set(pytesseract.get_languages(config=""))
+        selected = [lang for lang in ("eng", "hin") if lang in languages]
+        if not selected:
+            raise ValueError("OCR language data is missing. Install English or Hindi Tesseract language data.")
+        with Image.open(image_path) as image:
+            image = ImageOps.exif_transpose(image).convert("RGB")
+            text = pytesseract.image_to_string(image, lang="+".join(selected), config="--psm 3").strip()
+        if not text:
+            raise ValueError("No readable text was found in this image. Try a clearer image.")
+        return text
+    except ValueError:
+        raise
+    except Exception as exc:
+        raise ValueError("Image OCR is unavailable. Check the Tesseract installation and language data.") from exc
 
 
 def extract_selectable_text_from_pdf(pdf_path: Path) -> str:

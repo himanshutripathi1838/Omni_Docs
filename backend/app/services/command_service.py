@@ -69,6 +69,8 @@ def parse_command(command: str, file_type: str) -> dict:
     wants_compress = "compress" in normalized or "reduce size" in normalized or "smaller size" in normalized
     wants_crop = "crop" in normalized or "cropping" in normalized or "croping" in normalized
 
+    if file_type == "image" and wants_word:
+        return {"task": "image_to_word", "old_text": None, "new_text": None}
     if file_type in {"image", "heic"} and wants_crop:
         return {"task": "image_crop", "old_text": None, "new_text": None}
     if file_type == "pdf" and wants_zip:
