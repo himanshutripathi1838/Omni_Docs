@@ -568,6 +568,16 @@ export default function Upload() {
         <p className="mt-3 max-w-3xl text-sm font-semibold text-slate-600">
           Guest mode: 3 free edits/processes and max 3 MB upload. After login, uploads up to 70 MB are allowed.
         </p>
+        {error && (
+          <div className="form-error mt-6" role="alert">
+            <p>{error}</p>
+            {loginRequired && (
+              <Link className="mt-3 inline-flex font-extrabold text-red-800 underline" to="/login">
+                Log in to continue editing
+              </Link>
+            )}
+          </div>
+        )}
         {selectedTaskConfig && (
           <div className="mt-5 flex flex-wrap items-center gap-3 rounded-md border border-blue-100 bg-blue-50 px-4 py-3">
             <span className="text-sm font-extrabold text-slate-950">Selected tool: {selectedTaskConfig.label}</span>
@@ -669,16 +679,6 @@ export default function Upload() {
             onCanvasPointerUp={handleCanvasPointerUp}
             onSubmit={handleImageExport}
           />
-        )}
-        {error && (
-          <div className="form-error mt-6">
-            <p>{error}</p>
-            {loginRequired && (
-              <Link className="mt-3 inline-flex font-extrabold text-red-800 underline" to="/login">
-                Log in to continue editing
-              </Link>
-            )}
-          </div>
         )}
         <PreviewModal result={result} onClose={() => setResult(null)} />
         <PreviewModal result={imageResult} onClose={() => setImageResult(null)} />

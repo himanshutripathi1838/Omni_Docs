@@ -26,6 +26,8 @@ export default function PreviewModal({ result, onClose }) {
   const [textPreview, setTextPreview] = useState("");
   const [textPreviewError, setTextPreviewError] = useState("");
   const [downloadBaseName, setDownloadBaseName] = useState("");
+  const [downloadError, setDownloadError] = useState("");
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -33,6 +35,7 @@ export default function PreviewModal({ result, onClose }) {
     setTablePreviewError("");
     setTextPreview("");
     setTextPreviewError("");
+    setDownloadError("");
 
     const filename = result?.output_filename;
     if (!filename) return undefined;
@@ -85,16 +88,26 @@ export default function PreviewModal({ result, onClose }) {
 
   async function handleDownload() {
     if (!downloadUrl) return;
-    const response = await fetch(downloadUrl);
-    const blob = await response.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = objectUrl;
-    anchor.download = normalizedDownloadName();
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(objectUrl);
+    setDownloadError("");
+    setDownloading(true);
+    try {
+      const response = await fetch(downloadUrl);
+      if (!response.ok) throw new Error(`Download failed (${response.status})`);
+      const blob = await response.blob();
+      if (!blob.size) throw new Error("The output file is empty.");
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = normalizedDownloadName();
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+    } catch (err) {
+      setDownloadError(`${err.message || "Download failed."} Please try converting the file again.`);
+    } finally {
+      setDownloading(false);
+    }
   }
 
   return (
@@ -244,9 +257,10 @@ export default function PreviewModal({ result, onClose }) {
               )}
             </div>
             <p className="mt-2 text-xs font-semibold text-slate-500">The extension is locked. You can only change the file name.</p>
-            <button className="btn-primary mt-4 w-full justify-center" type="button" onClick={handleDownload}>
+            {downloadError && <p className="form-error mt-3" role="alert">{downloadError}</p>}
+            <button className="btn-primary mt-4 w-full justify-center" type="button" onClick={handleDownload} disabled={downloading}>
             <Download size={17} aria-hidden="true" />
-              Download output
+              {downloading ? "Downloading..." : "Download output"}
             </button>
           </div>
         )}
