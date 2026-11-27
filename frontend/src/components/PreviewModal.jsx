@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { Download, FilePenLine, X } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Download, X } from "lucide-react";
 import { API_BASE_URL, getTablePreview } from "../services/api.js";
 
 function formatSize(bytes) {
@@ -39,7 +38,7 @@ export default function PreviewModal({ result, onClose }) {
 
     const filename = result?.output_filename;
     if (!filename) return undefined;
-    setDownloadBaseName(splitFileName(filename).baseName);
+    setDownloadBaseName(splitFileName(result.original_filename || filename).baseName);
 
     if (/\.(txt)$/i.test(filename) && result?.preview_file_url) {
       fetch(`${API_BASE_URL}${result.preview_file_url}`)
@@ -235,12 +234,6 @@ export default function PreviewModal({ result, onClose }) {
         )}
         {downloadUrl && (
           <div className="mt-6 rounded-md border border-slate-200 bg-slate-50 p-4">
-            {result.detected_task === "pdf_to_word" && outputExtension.toLowerCase() === ".docx" && (
-              <Link className="btn-secondary mb-4 inline-flex items-center gap-2" to="/editor?type=word" state={{ convertedWordUrl: result.output_file_url, convertedWordName: result.output_filename }}>
-                <FilePenLine size={17} aria-hidden="true" />
-                Edit in Word editor
-              </Link>
-            )}
             <label className="form-label mt-0" htmlFor="download-name">Download file name</label>
             <div className="mt-2 flex min-h-11 overflow-hidden rounded-md border border-slate-300 bg-white focus-within:border-brand focus-within:ring-4 focus-within:ring-blue-100">
               <input

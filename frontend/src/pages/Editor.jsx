@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Download, ExternalLink, FilePenLine, FileText, Search } from "lucide-react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useSearchParams } from "react-router-dom";
 import Sidebar from "../components/Sidebar.jsx";
 import { API_BASE_URL, editPdfText, openDocumentForEdit, saveOpenDocumentEdit } from "../services/api.js";
@@ -32,8 +32,6 @@ function getApiErrorMessage(err, fallback) {
 
 export default function Editor() {
   const [searchParams] = useSearchParams();
-  const location = useLocation();
-  const navigate = useNavigate();
   const [mode, setMode] = useState("open");
   const [documentType, setDocumentType] = useState(() => initialDocumentType(searchParams));
   const [file, setFile] = useState(null);
@@ -52,43 +50,6 @@ export default function Editor() {
   const previewUrl = result?.preview_file_url ? `${API_BASE_URL}${result.preview_file_url}` : "";
   const downloadUrl = result?.output_file_url ? `${API_BASE_URL}${result.output_file_url}` : "";
   const canPreview = result?.output_filename?.toLowerCase().endsWith(".pdf");
-
-  useEffect(() => {
-    const url = location.state?.convertedWordUrl;
-    const name = location.state?.convertedWordName;
-    if (!url || !name || !/^\/api\/documents\/download\/[A-Za-z0-9._-]+\.docx$/i.test(url)) return undefined;
-    let active = true;
-    setLoading(true);
-    setError("");
-    async function openConvertedWord() {
-      try {
-        const response = await fetch(`${API_BASE_URL}${url}`);
-        if (!response.ok) throw new Error("Download failed");
-        const blob = await response.blob();
-        if (!active) return;
-        const convertedFile = new File([blob], name, { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
-        const data = await openDocumentForEdit(convertedFile, "word");
-        if (!active) return;
-        setFile(convertedFile);
-        setDocumentType("word");
-        setOpenedDocument(data);
-        setEditedText(data.text);
-        setWordBlocks(data.blocks || []);
-        setWordParagraphs(data.paragraphs || []);
-        setOutputName(`${name.replace(/\.docx$/i, "")}-edited`);
-        setOutputFormat("docx");
-      } catch {
-        if (active) setError("Converted Word file could not be opened. Try converting the PDF again.");
-      } finally {
-        if (active) {
-          setLoading(false);
-          navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
-        }
-      }
-    }
-    openConvertedWord();
-    return () => { active = false; };
-  }, [location.state, location.pathname, location.search, navigate]);
 
   function resetResult() {
     setError("");
