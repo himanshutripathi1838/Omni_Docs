@@ -260,6 +260,7 @@ def upload_document(
             "output_filename": output_path.name,
             "original_size": saved_path.stat().st_size,
             "output_size": result.get("output_size"),
+            "warning": result.get("warning"),
             "compressed_size": result.get("compressed_size"),
             "reduction_percent": result.get("reduction_percent"),
             "target_size": result.get("target_size"),

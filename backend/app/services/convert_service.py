@@ -48,7 +48,14 @@ def process_document(
     if task == "pdf_to_excel":
         return _result(pdf_to_excel(input_path, output_dir / f"{stem}.xlsx"))
     if task == "pdf_to_powerpoint":
-        return _result(pdf_to_powerpoint(input_path, output_dir / f"{stem}.pptx"))
+        import fitz
+
+        with fitz.open(input_path) as pdf:
+            scanned_pages = [index + 1 for index, page in enumerate(pdf) if not page.get_text("text").strip()]
+        warning = "Selectable PDF text is editable; images and background graphics remain images."
+        if scanned_pages:
+            warning += " Pages without selectable text remain images: " + ", ".join(map(str, scanned_pages)) + "."
+        return _result(pdf_to_powerpoint(input_path, output_dir / f"{stem}.pptx"), {"warning": warning})
     if task == "word_to_pdf":
         return _result(word_to_pdf(input_path, output_dir / f"{stem}.pdf"))
     if task == "powerpoint_to_pdf":

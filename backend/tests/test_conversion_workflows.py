@@ -76,7 +76,9 @@ class ConversionWorkflowTests(unittest.TestCase):
                 if task == "pdf_to_excel":
                     load_workbook(path)
                 elif task == "pdf_to_powerpoint":
-                    self.assertEqual(len(Presentation(path).slides), 1)
+                    presentation = Presentation(path)
+                    self.assertEqual(len(presentation.slides), 1)
+                    self.assertIn("Workflow Test Document", " ".join(shape.text for shape in presentation.slides[0].shapes if shape.has_text_frame))
                 elif task == "pdf_to_zip":
                     self.assertIsNone(zipfile.ZipFile(path).testzip())
                 elif task == "pdf_compress":
@@ -97,6 +99,25 @@ class ConversionWorkflowTests(unittest.TestCase):
         from app.routes.document_routes import read_table_rows
 
         self.assertEqual(read_table_rows(self.root / "source.xlsx")[:2], [["Name", "Count"], ["Alice", "42"]])
+
+    def test_multi_sheet_excel_to_csv_zip(self):
+        workbook = Workbook()
+        workbook.active.title = "Sales"
+        workbook.active.append(["Name", "Amount"])
+        workbook.active.append(["Alice", 42])
+        workbook.create_sheet("Costs").append(["Bob", 17])
+        workbook.save(self.root / "multi.xlsx")
+        path = self.convert("multi.xlsx", "excel", "excel_to_csv")
+        self.assertEqual(path.suffix, ".zip")
+        with zipfile.ZipFile(path) as archive:
+            self.assertEqual(set(archive.namelist()), {"Sales.csv", "Costs.csv"})
+            self.assertIn("Alice", archive.read("Sales.csv").decode("utf-8-sig"))
+            self.assertIn("Bob", archive.read("Costs.csv").decode("utf-8-sig"))
+
+    def test_scanned_pdf_to_powerpoint_warns(self):
+        result = process_document(self.root / "scan.pdf", self.out, "pdf", "pdf_to_powerpoint")
+        self.assertIn("Pages without selectable text remain images: 1", result["warning"])
+        self.assertEqual(len(Presentation(result["output_path"]).slides), 1)
 
     def test_legacy_excel(self):
         try:

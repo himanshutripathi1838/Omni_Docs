@@ -1,5 +1,7 @@
 from pathlib import Path
 import csv
+import re
+import zipfile
 
 
 def _load_pandas():
@@ -13,12 +15,26 @@ def _load_pandas():
 def excel_to_csv(input_path: Path, output_path: Path) -> Path:
     pd = _load_pandas()
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    # MVP: first sheet only. Future: export all sheets as separate CSV files inside a ZIP.
-    dataframe = pd.read_excel(input_path, sheet_name=0, engine="xlrd" if input_path.suffix.lower() == ".xls" else "openpyxl")
-    if dataframe.empty:
-        dataframe = pd.DataFrame([["No rows found in the first sheet."]])
-    dataframe.to_csv(output_path, index=False, encoding="utf-8-sig")
-    return _ensure_non_empty(output_path, "Excel to CSV output is blank.")
+    sheets = pd.read_excel(input_path, sheet_name=None, header=None, dtype=object, engine="xlrd" if input_path.suffix.lower() == ".xls" else "openpyxl")
+    if not sheets:
+        raise ValueError("The workbook has no sheets.")
+    if len(sheets) == 1:
+        next(iter(sheets.values())).to_csv(output_path, index=False, header=False, encoding="utf-8-sig")
+        return _ensure_non_empty(output_path, "Excel to CSV output is blank.")
+
+    zip_path = output_path.with_suffix(".zip")
+    used_names = set()
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as archive:
+        for index, (sheet_name, dataframe) in enumerate(sheets.items(), start=1):
+            base = re.sub(r'[\\/:*?"<>|\x00-\x1f]', "_", sheet_name).strip(" .") or f"sheet_{index}"
+            name = f"{base}.csv"
+            suffix = 2
+            while name.casefold() in used_names:
+                name = f"{base}_{suffix}.csv"
+                suffix += 1
+            used_names.add(name.casefold())
+            archive.writestr(name, dataframe.to_csv(index=False, header=False).encode("utf-8-sig"))
+    return _ensure_non_empty(zip_path, "Excel to CSV ZIP output is blank.")
 
 
 def excel_to_pdf(input_path: Path, output_path: Path) -> Path:

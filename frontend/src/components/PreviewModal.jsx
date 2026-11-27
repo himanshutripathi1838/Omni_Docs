@@ -158,6 +158,7 @@ export default function PreviewModal({ result, onClose }) {
           )}
         </dl>
         <p className="mt-4 text-sm leading-6 text-slate-600">{result.message}</p>
+        {result.warning && <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="status">{result.warning}</p>}
         {downloadUrl && isPdfOutput && (
           <section className="mt-5">
             <div className="mb-3 flex items-center justify-between gap-3">
