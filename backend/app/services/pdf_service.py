@@ -104,7 +104,7 @@ def pdf_to_word(pdf_path: Path, output_path: Path) -> Path:
 
     converter = Converter(str(pdf_path))
     try:
-        converter.convert(str(output_path))
+        converter.convert(str(output_path), ignore_page_error=False)
     finally:
         converter.close()
     return output_path
