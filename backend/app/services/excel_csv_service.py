@@ -14,7 +14,7 @@ def excel_to_csv(input_path: Path, output_path: Path) -> Path:
     pd = _load_pandas()
     output_path.parent.mkdir(parents=True, exist_ok=True)
     # MVP: first sheet only. Future: export all sheets as separate CSV files inside a ZIP.
-    dataframe = pd.read_excel(input_path, sheet_name=0, engine="openpyxl")
+    dataframe = pd.read_excel(input_path, sheet_name=0, engine="xlrd" if input_path.suffix.lower() == ".xls" else "openpyxl")
     if dataframe.empty:
         dataframe = pd.DataFrame([["No rows found in the first sheet."]])
     dataframe.to_csv(output_path, index=False, encoding="utf-8-sig")
@@ -23,7 +23,7 @@ def excel_to_csv(input_path: Path, output_path: Path) -> Path:
 
 def excel_to_pdf(input_path: Path, output_path: Path) -> Path:
     pd = _load_pandas()
-    dataframe = pd.read_excel(input_path, sheet_name=0, engine="openpyxl").fillna("")
+    dataframe = pd.read_excel(input_path, sheet_name=0, engine="xlrd" if input_path.suffix.lower() == ".xls" else "openpyxl").fillna("")
     rows = [list(map(str, dataframe.columns.tolist()))]
     rows.extend(dataframe.astype(str).values.tolist())
     if len(rows) == 1 and not rows[0]:

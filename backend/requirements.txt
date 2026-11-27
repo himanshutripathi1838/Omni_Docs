@@ -11,6 +11,7 @@ python-pptx
 pillow-heif
 pandas
 openpyxl
+xlrd>=2.0.1
 reportlab
 opencv-python==4.10.0.84
 pdfplumber

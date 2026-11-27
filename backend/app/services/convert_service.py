@@ -111,7 +111,9 @@ def process_document(
     if task == "ocr_extract":
         if file_type == "pdf":
             return _result(scanned_pdf_to_editable_text(input_path, output_dir / f"{stem}_extracted.txt"))
-        text = extract_text_from_image(input_path) if file_type == "image" else f"OCR/text extraction placeholder for {input_path.name}"
+        if file_type not in {"image", "heic"}:
+            raise ValueError("OCR supports images and PDFs only.")
+        text = extract_text_from_image(input_path)
         return _result(write_text_output(text, output_dir / f"{stem}_extracted.txt"))
     if task in {"pdf_merge", "pdf_split"}:
         return _result(placeholder_pdf_tool(output_dir / f"{stem}_{task}.txt", task))

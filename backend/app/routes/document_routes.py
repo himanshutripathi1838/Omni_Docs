@@ -1,8 +1,5 @@
 from pathlib import Path
 import csv
-import re
-from xml.etree import ElementTree
-import zipfile
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
@@ -11,9 +8,6 @@ from app.config.settings import OUTPUT_DIR, UPLOAD_DIR
 
 
 router = APIRouter(prefix="/documents", tags=["documents"])
-
-
-SPREADSHEET_NS = {"main": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 
 
 def media_type_for(file_path: Path) -> str:
@@ -41,34 +35,19 @@ def media_type_for(file_path: Path) -> str:
     return "application/octet-stream"
 
 
-def _cell_column_index(cell_ref: str) -> int:
-    letters = "".join(re.findall(r"[A-Z]+", cell_ref.upper()))
-    value = 0
-    for letter in letters:
-        value = (value * 26) + (ord(letter) - 64)
-    return max(value, 1)
-
-
 def _read_csv_rows(file_path: Path) -> list[list[str]]:
     with file_path.open("r", encoding="utf-8-sig", newline="") as csv_file:
         return [row for row in csv.reader(csv_file)]
 
 
 def _read_xlsx_rows(file_path: Path) -> list[list[str]]:
-    with zipfile.ZipFile(file_path) as workbook:
-        sheet_xml = workbook.read("xl/worksheets/sheet1.xml")
-    root = ElementTree.fromstring(sheet_xml)
-    rows = []
-    for row in root.findall(".//main:row", SPREADSHEET_NS):
-        values = []
-        for cell in row.findall("main:c", SPREADSHEET_NS):
-            column_index = _cell_column_index(cell.attrib.get("r", "")) - 1
-            while len(values) < column_index:
-                values.append("")
-            text_node = cell.find(".//main:t", SPREADSHEET_NS)
-            values.append(text_node.text if text_node is not None and text_node.text is not None else "")
-        rows.append(values)
-    return rows
+    from openpyxl import load_workbook
+
+    workbook = load_workbook(file_path, read_only=True, data_only=True)
+    try:
+        return [["" if value is None else str(value) for value in row] for row in workbook.worksheets[0].iter_rows(values_only=True)]
+    finally:
+        workbook.close()
 
 
 def read_table_rows(file_path: Path) -> list[list[str]]:

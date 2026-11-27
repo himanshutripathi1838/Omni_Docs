@@ -21,6 +21,10 @@ def extract_text_from_image(image_path: Path) -> str:
     try:
         from PIL import Image, ImageOps
 
+        if image_path.suffix.lower() in {".heic", ".heif"}:
+            from pillow_heif import register_heif_opener
+            register_heif_opener()
+
         with Image.open(image_path) as image:
             image = ImageOps.exif_transpose(image).convert("RGB")
             text = extract_text_from_pil_image(image)
@@ -44,32 +48,20 @@ def extract_selectable_text_from_pdf(pdf_path: Path) -> str:
 
 
 def scanned_pdf_to_editable_text(pdf_path: Path, output_path: Path) -> Path:
-    selectable_text = extract_selectable_text_from_pdf(pdf_path)
-    if selectable_text:
-        return write_text_output(selectable_text, output_path)
+    from PIL import Image
 
-    try:
-        import pytesseract
-        from PIL import Image
-    except ImportError:
-        text = (
-            f"Scanned PDF detected: {pdf_path.name}\n\n"
-            "No selectable text was found. Install and configure pytesseract and Pillow for OCR.\n"
-            "Future upgrade: searchable PDF and editable DOCX support will be added here."
-        )
-        return write_text_output(text, output_path)
-
-    output_lines = [f"Scanned PDF OCR result: {pdf_path.name}"]
+    output_lines = []
     with fitz.open(pdf_path) as document:
         if document.page_count == 0:
             raise ValueError("No pages were found in the PDF.")
         for page_index, page in enumerate(document, start=1):
-            pixmap = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
-            image = Image.frombytes("RGB", [pixmap.width, pixmap.height], pixmap.samples)
-            text = pytesseract.image_to_string(image, lang="eng+hin").strip()
-            output_lines.append(f"\n--- Page {page_index} ---\n{text or '[OCR text not detected on this page]'}")
+            text = page.get_text("text").strip()
+            if not text:
+                pixmap = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False, colorspace=fitz.csRGB)
+                image = Image.frombytes("RGB", (pixmap.width, pixmap.height), pixmap.samples)
+                text = extract_text_from_pil_image(image)
+            output_lines.append(f"--- Page {page_index} ---\n{text or '[No readable text detected on this page]'}")
 
-    # Future upgrade: searchable PDF and editable DOCX generation can reuse these OCR page blocks.
     return write_text_output("\n".join(output_lines), output_path)
 
 

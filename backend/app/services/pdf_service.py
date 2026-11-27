@@ -1,7 +1,6 @@
 from pathlib import Path
 import csv
 import re
-from xml.sax.saxutils import escape
 import zipfile
 
 import fitz
@@ -164,82 +163,19 @@ def pdf_to_csv(pdf_path: Path, output_path: Path) -> Path:
     return output_path
 
 
-def _column_name(index: int) -> str:
-    name = ""
-    while index:
-        index, remainder = divmod(index - 1, 26)
-        name = chr(65 + remainder) + name
-    return name
-
-
-def _xlsx_sheet_xml(rows: list[list[str]]) -> str:
-    sheet_rows = []
-    for row_index, row in enumerate(rows, start=1):
-        cells = []
-        for column_index, value in enumerate(row, start=1):
-            cell_ref = f"{_column_name(column_index)}{row_index}"
-            safe_value = escape(str(value))
-            cells.append(f'<c r="{cell_ref}" t="inlineStr"><is><t>{safe_value}</t></is></c>')
-        sheet_rows.append(f'<row r="{row_index}">{"".join(cells)}</row>')
-    return (
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-        '<sheetData>'
-        f'{"".join(sheet_rows)}'
-        '</sheetData>'
-        '</worksheet>'
-    )
-
-
 def write_rows_to_xlsx(rows: list[list[str]], output_path: Path) -> Path:
+    from openpyxl import Workbook
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as workbook:
-        workbook.writestr(
-            "[Content_Types].xml",
-            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-            '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
-            '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
-            '<Default Extension="xml" ContentType="application/xml"/>'
-            '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
-            '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
-            '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
-            "</Types>",
-        )
-        workbook.writestr(
-            "_rels/.rels",
-            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-            '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
-            "</Relationships>",
-        )
-        workbook.writestr(
-            "xl/workbook.xml",
-            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-            '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
-            'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
-            '<sheets><sheet name="PDF Export" sheetId="1" r:id="rId1"/></sheets>'
-            "</workbook>",
-        )
-        workbook.writestr(
-            "xl/_rels/workbook.xml.rels",
-            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-            '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
-            '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
-            "</Relationships>",
-        )
-        workbook.writestr(
-            "xl/styles.xml",
-            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-            '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-            '<fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts>'
-            '<fills count="1"><fill><patternFill patternType="none"/></fill></fills>'
-            '<borders count="1"><border/></borders>'
-            '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-            '<cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs>'
-            "</styleSheet>",
-        )
-        workbook.writestr("xl/worksheets/sheet1.xml", _xlsx_sheet_xml(rows))
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "PDF Export"
+    for row in rows:
+        sheet.append([str(value) for value in row])
+        for cell in sheet[sheet.max_row]:
+            if cell.data_type == "f":
+                cell.data_type = "s"
+    workbook.save(output_path)
     return output_path
 
 
