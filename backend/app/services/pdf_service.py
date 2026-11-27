@@ -1,13 +1,10 @@
 from pathlib import Path
 import csv
 import re
-from tempfile import TemporaryDirectory
 from xml.sax.saxutils import escape
 import zipfile
 
 import fitz
-from docx import Document
-from docx.shared import Inches
 
 
 def int_to_rgb(color_value: int) -> tuple[float, float, float]:
@@ -66,43 +63,19 @@ def fit_font_size(text: str, max_width: float, font_size: float) -> float:
 
 
 def pdf_to_word(pdf_path: Path, output_path: Path) -> Path:
-    document = Document()
+    from pdf2docx import Converter
 
-    with fitz.open(pdf_path) as pdf, TemporaryDirectory() as temp_dir:
+    with fitz.open(pdf_path) as pdf:
         if not pdf.page_count:
-            document.add_paragraph("No pages found in this PDF.")
-            document.save(output_path)
-            return output_path
+            raise ValueError("No pages found in this PDF.")
+        if not any(page.get_text("text").strip() for page in pdf):
+            raise ValueError("This PDF has no selectable text. Scanned PDFs need OCR before editable Word conversion.")
 
-        first_page = pdf[0]
-        first_rect = first_page.rect
-        section = document.sections[0]
-        section.page_width = Inches(first_rect.width / 72)
-        section.page_height = Inches(first_rect.height / 72)
-        section.top_margin = Inches(0.2)
-        section.bottom_margin = Inches(0.2)
-        section.left_margin = Inches(0.2)
-        section.right_margin = Inches(0.2)
-
-        page_width = section.page_width - section.left_margin - section.right_margin
-        zoom_matrix = fitz.Matrix(2, 2)
-
-        for index, page in enumerate(pdf, start=1):
-            if index > 1:
-                document.add_page_break()
-
-            image_path = Path(temp_dir) / f"page_{index}.png"
-            pixmap = page.get_pixmap(matrix=zoom_matrix, alpha=False)
-            pixmap.save(image_path)
-            document.add_picture(str(image_path), width=page_width)
-
-            text = page.get_text("text").strip()
-            if text:
-                hidden_paragraph = document.add_paragraph()
-                hidden_run = hidden_paragraph.add_run(text)
-                hidden_run.font.hidden = True
-
-    document.save(output_path)
+    converter = Converter(str(pdf_path))
+    try:
+        converter.convert(str(output_path))
+    finally:
+        converter.close()
     return output_path
 
 
