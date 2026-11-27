@@ -3,18 +3,27 @@ from pathlib import Path
 import fitz
 
 
-def extract_text_from_image(image_path: Path) -> str:
+def extract_text_from_pil_image(image) -> str:
     try:
         import pytesseract
-        from PIL import Image, ImageOps
-
         languages = set(pytesseract.get_languages(config=""))
         selected = [lang for lang in ("eng", "hin") if lang in languages]
         if not selected:
             raise ValueError("OCR language data is missing. Install English or Hindi Tesseract language data.")
+        return pytesseract.image_to_string(image, lang="+".join(selected), config="--psm 3").strip()
+    except ValueError:
+        raise
+    except Exception as exc:
+        raise ValueError("OCR is unavailable. Check the Tesseract installation and language data.") from exc
+
+
+def extract_text_from_image(image_path: Path) -> str:
+    try:
+        from PIL import Image, ImageOps
+
         with Image.open(image_path) as image:
             image = ImageOps.exif_transpose(image).convert("RGB")
-            text = pytesseract.image_to_string(image, lang="+".join(selected), config="--psm 3").strip()
+            text = extract_text_from_pil_image(image)
         if not text:
             raise ValueError("No readable text was found in this image. Try a clearer image.")
         return text

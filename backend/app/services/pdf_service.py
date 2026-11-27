@@ -5,6 +5,10 @@ from xml.sax.saxutils import escape
 import zipfile
 
 import fitz
+from docx import Document
+from docx.shared import Inches
+
+from app.services.ocr_service import extract_text_from_pil_image
 
 
 def int_to_rgb(color_value: int) -> tuple[float, float, float]:
@@ -68,8 +72,35 @@ def pdf_to_word(pdf_path: Path, output_path: Path) -> Path:
     with fitz.open(pdf_path) as pdf:
         if not pdf.page_count:
             raise ValueError("No pages found in this PDF.")
+        needs_ocr = any(not page.get_text("text").strip() and page.get_images() for page in pdf)
+        if needs_ocr:
+            from PIL import Image
+
+            document = Document()
+            has_text = False
+            for index, page in enumerate(pdf):
+                if index:
+                    document.add_page_break()
+                section = document.sections[-1]
+                section.page_width = Inches(page.rect.width / 72)
+                section.page_height = Inches(page.rect.height / 72)
+                text = page.get_text("text").strip()
+                if not text and page.get_images():
+                    pixmap = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False, colorspace=fitz.csRGB)
+                    image = Image.frombytes("RGB", (pixmap.width, pixmap.height), pixmap.samples)
+                    text = extract_text_from_pil_image(image)
+                    if not text:
+                        raise ValueError(f"No readable text found on scanned page {index + 1}. Try a clearer scan.")
+                if text:
+                    has_text = True
+                    for line in text.splitlines():
+                        document.add_paragraph(line)
+            if not has_text:
+                raise ValueError("No readable text found in the PDF. Try a clearer scan.")
+            document.save(output_path)
+            return output_path
         if not any(page.get_text("text").strip() for page in pdf):
-            raise ValueError("This PDF has no selectable text. Scanned PDFs need OCR before editable Word conversion.")
+            raise ValueError("No readable text found in the PDF.")
 
     converter = Converter(str(pdf_path))
     try:
